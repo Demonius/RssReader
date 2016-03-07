@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">RssReader</string>
+
+    <string name="loading_xml">Загружаем xml...</string>
+    <string name="loading_bd">Загружаем данные на экран...</string>
+
+
+</resources>
