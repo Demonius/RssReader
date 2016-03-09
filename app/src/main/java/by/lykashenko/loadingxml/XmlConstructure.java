@@ -1,26 +1,24 @@
 package by.lykashenko.loadingxml;
 
 
-import org.simpleframework.xml.Attribute;
-import org.simpleframework.xml.Element;
-import org.simpleframework.xml.Namespace;
+import org.simpleframework.xml.ElementList;
+import org.simpleframework.xml.Path;
 import org.simpleframework.xml.Root;
+
+import java.util.List;
 
 /**
  * Created by Admin on 03.03.16.
  */
-@Root(name = "rss")
-@Namespace(reference = "http://www.w3.org/2005/Atom", prefix = "atom")
+@Root(name = "rss",strict = false)
 public class XmlConstructure {
     public XmlConstructure(){}
-    //
-    @Attribute(name = "version")
-    private String version;
 
-    @Element(name = "channel")
-    private Channel channel;
+    @Path("channel")
+    @ElementList(name = "item", inline = true)
+    private List<ItemNews> item;
 
-    public Channel getChannel() {
-        return channel;
+    public List<ItemNews> getItem() {
+        return item;
     }
 }

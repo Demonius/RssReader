@@ -11,12 +11,16 @@ import android.util.Log;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.activeandroid.ActiveAndroid;
+import com.activeandroid.Configuration;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import by.lykashenko.interfaces.InterfaceLoadingXml;
 import by.lykashenko.loadingxml.ItemNews;
 import by.lykashenko.loadingxml.XmlConstructure;
+import by.lykashenko.onlinernews.News;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -29,7 +33,7 @@ public class SplashActivity extends Activity {
     public static TextView textLoading;
    public static ProgressBar progressBarLoading;
     private static Integer status;
-    private  String url = "http://news.tut.by/";
+    private  String url = "http://www.onliner.by/";
     public static String LOADING_XML;
     public static String LOADING_DATA;
     public static String LOG_TAG = "log_rss";
@@ -39,6 +43,8 @@ public class SplashActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+        Configuration dbConfiguration = new Configuration.Builder(this).setDatabaseName("Onliner.db").setModelClasses(News.class).create();
+        ActiveAndroid.initialize(dbConfiguration);
 
         LOADING_XML = getResources().getString(R.string.loading_xml);
         LOADING_DATA = getResources().getString(R.string.loading_bd);
@@ -67,18 +73,41 @@ public class SplashActivity extends Activity {
                 if (response!=null){
                     Log.d(LOG_TAG,"есть данные");
                 try{
-                    String title = response.body().getChannel().getTitle().toString();
-                    Log.d("log_rss","title = "+title);
+//                    String title = response.body().getItem().get(0).getTitle().toString();
+//                    Log.d("log_rss","title = "+title);
+//
+//                    String description = response.body().getItem().get(0).getDescription().toString();
+//                    Log.d("log_rss","description = "+description);
 
-                    String description = response.body().getChannel().getPubDate().toString();
-                    Log.d("log_rss","PubDate = "+description);
-
-                    List<ItemNews> news = response.body().getChannel().getItem();
+                    List<ItemNews> news = response.body().getItem();
                     Integer size = news.size();
                     Log.d(LOG_TAG, "size = "+Integer.toString(size));
+                    Integer i = 0;
+                    ActiveAndroid.beginTransaction();
+                    try {
+                        while (i < size) {
 
-                    String name = news.get(1).getTitlenews().toString();
-                    Log.d("log_rss","TitleNews = "+name);
+                            String title = news.get(i).getTitle().toString();
+                            String pubDate = news.get(i).getPubDate().toString();
+                            String category = news.get(i).getCategory().toString();
+                            String description = news.get(i).getDescription().toString();
+                            String urlImage = news.get(i).getUrlImage().toString();
+                            Log.d(LOG_TAG, "Id = "+Integer.toString(i)+",Title = "+title);
+                            News newssave = new News(title,pubDate,category,description,urlImage);
+                            newssave.save();
+
+                            i = i + 1;
+
+                        }ActiveAndroid.setTransactionSuccessful();
+                    }
+                    finally {
+                        ActiveAndroid.endTransaction();
+                        Log.d("log_rss","сохранено в базу");
+
+                    }
+
+//                    String name = news.get(0).getPubDate().toString();
+//                    Log.d("log_rss","pubDate = "+name);
 
                 }catch (Exception e){
                     e.printStackTrace();
