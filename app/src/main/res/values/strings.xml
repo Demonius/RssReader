@@ -3,6 +3,28 @@
 
     <string name="loading_xml">Загружаем xml...</string>
     <string name="loading_bd">Загружаем данные на экран...</string>
+    <string name="close">Закрыть</string>
+    <string name="loadfromdb_ok">Данные загружены.</string>
+
+    <string name="internet_off">Включите одно из подключений к сети.</string>
+
+    <string name="list_of_update_pref">Время обновления данных</string>
+    <string-array name="entries">
+        <item>15 мин</item>
+        <item>30 мин</item>
+        <item>1 час</item>
+        <item>5 часов</item>
+    </string-array>
+
+    <string-array name="entry_values">
+        <item>900000</item>
+        <item>1800000</item>
+        <item>3600000</item>
+        <item>18000000</item>
+    </string-array>
+
+
+
 
 
 </resources>
