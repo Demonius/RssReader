@@ -13,7 +13,11 @@ import android.widget.TextView;
 
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.Configuration;
+import com.activeandroid.query.Delete;
 
+import java.io.File;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -57,7 +61,8 @@ public class SplashActivity extends Activity {
             // сеть доступна
             Log.d(LOG_TAG, "сеть доступна");
 
-            UpdateNews();
+
+            UpdateNews(getApplicationContext().getFilesDir(), listFilesWithSubFolders(getApplicationContext().getFilesDir()));
             AsyncTaskLoadingXML asyncTaskLoadingXML = new AsyncTaskLoadingXML();
             asyncTaskLoadingXML.execute();
 
@@ -69,7 +74,20 @@ public class SplashActivity extends Activity {
 
     }
 
-    public static void UpdateNews() {
+
+
+    public static void UpdateNews(File filesDir, ArrayList<File> files) {
+
+        Integer size = files.size();
+        Integer i=0;
+        while (i<size){
+            File file = new File(filesDir, files.get(i).toString());
+            file.delete();
+            i=i+1;
+        }
+
+
+
         Retrofit retrofit = new Retrofit.Builder().baseUrl(url).addConverterFactory(SimpleXmlConverterFactory.create()).build();
         Log.d(LOG_TAG, "retrofit start");
         InterfaceLoadingXml interfaceLoadingXml = retrofit.create(InterfaceLoadingXml.class);
@@ -90,6 +108,7 @@ public class SplashActivity extends Activity {
                         Log.d(LOG_TAG, "size = " + Integer.toString(size));
                         Integer i = 0;
                         ActiveAndroid.beginTransaction();
+                        new Delete().from(News.class).execute();
                         try {
                             while (i < size) {
 
@@ -127,6 +146,17 @@ public class SplashActivity extends Activity {
                 Log.d(LOG_TAG, "Call onFailure " + t.toString());
             }
         });
+    }
+
+    public ArrayList<File> listFilesWithSubFolders(File dir) {
+        ArrayList<File> files = new ArrayList<File>();
+        for (File file : dir.listFiles()) {
+            if (file.isDirectory())
+                files.addAll(listFilesWithSubFolders(file));
+            else
+                files.add(file);
+        }
+        return files;
     }
 
 

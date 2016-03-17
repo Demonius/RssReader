@@ -17,6 +17,20 @@
 package by.lykashenko.interfaces;
 
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.http.AndroidHttpClient;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.util.Log;
+import android.widget.ImageView;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -24,25 +38,20 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
-import android.net.http.AndroidHttpClient;
-import android.os.AsyncTask;
-import android.os.Handler;
-import android.util.Log;
-import android.widget.ImageView;
-
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+
+import by.lykashenko.rssreader.NewsActivity;
 
 /**
  * This helper class download images from the Internet and binds those with the provided ImageView.
@@ -53,10 +62,26 @@ import java.util.concurrent.ConcurrentHashMap;
  * A local cache of downloaded images is maintained internally to improve performance.
  */
 public class ImageDownloader {
+    private File cacheDir;
+    private String position;
+    private Integer state;
+    private String path;
+
     private static final String LOG_TAG = "ImageDownloader";
+
+    public void setContextImage(File cacheDir, String position) {
+        this.cacheDir=cacheDir;
+        this.position=position;
+
+    }
 
     public enum Mode { NO_ASYNC_TASK, NO_DOWNLOADED_DRAWABLE, CORRECT }
     private Mode mode = Mode.NO_ASYNC_TASK;
+    private Context context;
+
+    public void setContextImage(Context context){
+        this.context = context;
+    }
     
     /**
      * Download the specified image from the Internet and binds it to the provided ImageView. The
@@ -68,11 +93,15 @@ public class ImageDownloader {
      */
     public void download(String url, ImageView imageView) {
         resetPurgeTimer();
+        state = NewsActivity.state;
+        path = NewsActivity.path;
         Bitmap bitmap = getBitmapFromCache(url);
 
         if (bitmap == null) {
+            Log.d(LOG_TAG,"bitmap no");
             forceDownload(url, imageView);
         } else {
+            Log.d(LOG_TAG,"bitmap ok");
             cancelPotentialDownload(url, imageView);
             imageView.setImageBitmap(bitmap);
         }
@@ -265,17 +294,49 @@ public class ImageDownloader {
             }
 
             addBitmapToCache(url, bitmap);
+            if (state == 1) {
+                addBitmapToStorage(url, bitmap);
+            }
 
             if (imageViewReference != null) {
-                ImageView imageView = imageViewReference.get();
-                BitmapDownloaderTask bitmapDownloaderTask = getBitmapDownloaderTask(imageView);
-                // Change bitmap only if this process is still associated with it
-                // Or if we don't use any bitmap to task association (NO_DOWNLOADED_DRAWABLE mode)
-                if ((this == bitmapDownloaderTask) || (mode != Mode.CORRECT)) {
-                    imageView.setImageBitmap(bitmap);
-                }
+//                if (state == 1) {
+                    ImageView imageView = imageViewReference.get();
+                    BitmapDownloaderTask bitmapDownloaderTask = getBitmapDownloaderTask(imageView);
+                    // Change bitmap only if this process is still associated with it
+                    // Or if we don't use any bitmap to task association (NO_DOWNLOADED_DRAWABLE mode)
+                    if ((this == bitmapDownloaderTask) || (mode != Mode.CORRECT)) {
+                        imageView.setImageBitmap(bitmap);
+                    }
+//                }else{
+//                    Bitmap bitmap1 = getBitmapFromCache(url);
+//                }
             }
         }
+    }
+
+    private void addBitmapToStorage(String url, Bitmap bitmap) {
+        OutputStream fOut = null;
+        String[] separated = url.split("/");
+        try {
+
+            File file = new File(cacheDir , separated[7]);
+            fOut = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
+            try {
+                fOut.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                fOut.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
 
@@ -313,7 +374,7 @@ public class ImageDownloader {
      * Garbage Collector.
      */
     
-    private static final int HARD_CACHE_CAPACITY = 10;
+    private static final int HARD_CACHE_CAPACITY = 30;
     private static final int DELAY_BEFORE_PURGE = 10 * 1000; // in milliseconds
 
     // Hard cache, with a fixed maximum capacity and a life duration
@@ -359,29 +420,39 @@ public class ImageDownloader {
      * @return The cached bitmap or null if it was not found.
      */
     private Bitmap getBitmapFromCache(String url) {
-        // First try the hard reference cache
-        synchronized (sHardBitmapCache) {
-            final Bitmap bitmap = sHardBitmapCache.get(url);
-            if (bitmap != null) {
-                // Bitmap found in hard cache
-                // Move element to first position, so that it is removed last
-                sHardBitmapCache.remove(url);
-                sHardBitmapCache.put(url, bitmap);
-                return bitmap;
-            }
-        }
 
-        // Then try the soft reference cache
-        SoftReference<Bitmap> bitmapReference = sSoftBitmapCache.get(url);
-        if (bitmapReference != null) {
-            final Bitmap bitmap = bitmapReference.get();
-            if (bitmap != null) {
-                // Bitmap found in soft cache
-                return bitmap;
-            } else {
-                // Soft reference has been Garbage Collected
-                sSoftBitmapCache.remove(url);
+        if (state == 1) {
+            // First try the hard reference cache
+            synchronized (sHardBitmapCache) {
+                final Bitmap bitmap = sHardBitmapCache.get(url);
+                if (bitmap != null) {
+                    // Bitmap found in hard cache
+                    // Move element to first position, so that it is removed last
+                    sHardBitmapCache.remove(url);
+                    sHardBitmapCache.put(url, bitmap);
+                    return bitmap;
+                }
             }
+
+            // Then try the soft reference cache
+            SoftReference<Bitmap> bitmapReference = sSoftBitmapCache.get(url);
+            if (bitmapReference != null) {
+                final Bitmap bitmap = bitmapReference.get();
+                if (bitmap != null) {
+                    // Bitmap found in soft cache
+                    return bitmap;
+                } else {
+                    // Soft reference has been Garbage Collected
+                    sSoftBitmapCache.remove(url);
+                }
+            }
+        }else{
+            String[] separated = url.split("/");
+
+            String file = new StringBuilder(path).append("/").append(separated[7]).toString();
+
+            Bitmap bitmap = BitmapFactory.decodeFile(file);
+            return bitmap;
         }
 
         return null;

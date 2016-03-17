@@ -39,21 +39,26 @@ public class DialogNewsRead extends DialogFragment implements View.OnClickListen
         textViewNews = (TextView) viewDialog.findViewById(R.id.textViewNews);
         imageNews = (ImageView) viewDialog.findViewById(R.id.imageViewNews);
 
-        ImageDownloader imageDownloader = new ImageDownloader();
-        imageDownloader.setMode(ImageDownloader.Mode.CORRECT);
-        imageDownloader.download(URLImageNews,imageNews);
+        setRetainInstance(true);
 
-        Document doc = Jsoup.parse(newsText);
 
-        Element link = doc.select("p").get(1);
-        String textNews = link.html();
 
-        Element link1 = doc.select("p").last();
-        String textNext = link1.html();
+            ImageDownloader imageDownloader = new ImageDownloader();
+            imageDownloader.setMode(ImageDownloader.Mode.CORRECT);
+            imageDownloader.download(URLImageNews, imageNews);
 
-        String text = new StringBuilder().append(textNews).append(" ").append(textNext).toString();
-        textViewNews.setText(Html.fromHtml(text),TextView.BufferType.SPANNABLE);
-        textViewNews.setMovementMethod(LinkMovementMethod.getInstance());
+            Document doc = Jsoup.parse(newsText);
+
+            Element link = doc.select("p").get(1);
+            String textNews = link.html();
+
+            Element link1 = doc.select("p").last();
+            String textNext = link1.html();
+
+            String text = new StringBuilder().append(textNews).append(" ").append(textNext).toString();
+            textViewNews.setText(Html.fromHtml(text), TextView.BufferType.SPANNABLE);
+            textViewNews.setMovementMethod(LinkMovementMethod.getInstance());
+
 
         buttonCloseNews.setOnClickListener(this);
 
@@ -79,4 +84,6 @@ public class DialogNewsRead extends DialogFragment implements View.OnClickListen
     public void setNewsText(String newsText) {
         this.newsText = newsText;
     }
+
+
 }
